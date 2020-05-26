@@ -16,8 +16,8 @@ class _VacationRecordsScreenState extends State<VacationRecordsScreen> {
         onPressed: () {
 
         },
-        child: Icon(Icons.add),
-        backgroundColor: Colors.amber,
+        child: Icon(Icons.add,),
+        backgroundColor: Colors.cyanAccent,
       ),
     );
   }
