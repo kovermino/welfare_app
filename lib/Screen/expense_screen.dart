@@ -50,7 +50,7 @@ class _ExpenseRecordsScreenState extends State<ExpenseRecordsScreen> {
 
         },
         child: Icon(Icons.add),
-        backgroundColor: Colors.amber,
+        backgroundColor: kExpenseColour,
       ),
     );
   }

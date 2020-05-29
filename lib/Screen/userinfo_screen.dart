@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:welfare_app/Screen/dashboard_screen.dart';
+import 'package:welfare_app/Util/vacation_calaulator.dart';
 import 'package:welfare_app/constants.dart';
 
 class UserInfoScreen extends StatefulWidget {
@@ -15,10 +16,15 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   String userName = '';
   String email = '';
   String joinedDate = '';
+  String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+  String currentYear = DateFormat('yyyy').format(DateTime.now());
+  int available = 0;
+  bool autoCalc = true;
 
   var userNameEditController = TextEditingController();
   var emailEditController = TextEditingController();
   var joinedDateEditController = TextEditingController();
+  var availableVacationController = TextEditingController();
 
   @override
   void initState() {
@@ -34,6 +40,15 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     userNameEditController.text = userName;
     emailEditController.text = email;
     joinedDateEditController.text = joinedDate;
+
+    int available = _prefs.getInt(currentYear);
+    print(available);
+    if (available == null || available == 0) {
+      availableVacationController.text = VacationCalculator.calculateCurrentAvailableFromJoinedDate(joinedDate, currentDate).toString();
+    } else {
+      availableVacationController.text = available.toString();
+    }
+
   }
 
   void callDatePicker() async {
@@ -42,6 +57,8 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       if (order != null) {
         joinedDateEditController.text = DateFormat('yyyy-MM-dd').format(order);
         joinedDate = DateFormat('yyyy-MM-dd').format(order);
+        autoCalc = true;
+        availableVacationController.text = VacationCalculator.calculateCurrentAvailableFromJoinedDate(joinedDate, currentDate).toString();
       }
     });
   }
@@ -86,105 +103,136 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                Text(
-                  'User info',
-                  style: TextStyle(
-                    fontSize: 30.0,
-                  ),
+      resizeToAvoidBottomPadding: false,
+      body: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(40.0),
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[
+                    Text(
+                      'User info',
+                      style: TextStyle(
+                        fontSize: 30.0,
+                      ),
+                    ),
+                    SizedBox(
+                      height: 50.0,
+                    ),
+                    TextFormField(
+                      controller: userNameEditController,
+                      decoration: const InputDecoration(
+                          icon: Icon(Icons.person),
+                          labelText: 'Name *'
+                      ),
+                      onChanged: (text) {
+                        userName = text;
+                      },
+                      validator: (text) {
+                        if (text == null || text.isEmpty) {
+                          return 'Name is empty';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    TextFormField(
+                      controller: emailEditController,
+                      decoration: InputDecoration(
+                          icon: Icon(Icons.mail),
+                          labelText: 'Email *'
+                      ),
+                      onChanged: (text) {
+                        email = text;
+                      },
+                      validator: (text) {
+                        return text.contains('@') ? null : 'Email must contains @ character';
+                      },
+                    ),
+                    TextFormField(
+                      readOnly: true,
+                      controller: joinedDateEditController,
+                      onTap: () {
+                        callDatePicker();
+                      },
+                      keyboardType: TextInputType.datetime,
+                      decoration: InputDecoration(
+                          icon: Icon(Icons.date_range),
+                          labelText: 'Joined Date *'
+                      ),
+                      onChanged: (text) {
+                        joinedDate = text;
+                      },
+                      validator: (text) {
+                        if (text == null || text.isEmpty) {
+                          return 'Joined date is empty';
+                        }
+                        return null;
+                      },
+                    ),
+                    TextFormField(
+                      controller: availableVacationController,
+                      readOnly: autoCalc,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                          icon: Icon(Icons.event_available),
+                          labelText: 'Available Vacation *'
+                      ),
+                    ),
+                    SizedBox(
+                      height: 30.0,
+                    ),
+                    Container(
+                      color: Colors.blueGrey[800],
+                      child: ListTile(
+                        leading: Icon(Icons.autorenew),
+                        title: Text('auto calculate vacations'),
+                        trailing: Checkbox(
+                          checkColor: Colors.black,
+                          value: autoCalc,
+                          onChanged: (value) {
+                            setState(() {
+                              autoCalc = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      height: 50.0,
+                    ),
+                    RaisedButton(
+                      onPressed: () {
+                        if (_formKey.currentState.validate()) {
+                          _prefs.setString(kUserName, userName);
+                          _prefs.setString(kEmail, email);
+                          _prefs.setString(kJoinedDate, joinedDate);
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => DashboardScreen()),
+                          );
+                        }
+                      },
+                      color: Colors.green[900],
+                      textColor: Colors.white,
+                      padding: const EdgeInsets.all(0.0),
+                      child: Container(
+                        padding: const EdgeInsets.all(10.0),
+                        child:
+                        const Text('Ok', style: TextStyle(fontSize: 20)),
+                      ),
+                    )
+                  ],
                 ),
-                SizedBox(
-                  height: 50.0,
-                ),
-                TextFormField(
-                  controller: userNameEditController,
-                  decoration: const InputDecoration(
-                      icon: Icon(Icons.person),
-                      labelText: 'Name *'
-                  ),
-                  onChanged: (text) {
-                    userName = text;
-                  },
-                  validator: (text) {
-                    if (text == null || text.isEmpty) {
-                      return 'Name is empty';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(
-                  height: 30.0,
-                ),
-                TextFormField(
-                  controller: emailEditController,
-                  decoration: InputDecoration(
-                      icon: Icon(Icons.mail),
-                      labelText: 'Email *'
-                  ),
-                  onChanged: (text) {
-                    email = text;
-                  },
-                  validator: (text) {
-                    return text.contains('@') ? null : 'Email must contains @ character';
-                  },
-                ),
-                SizedBox(
-                  height: 30.0,
-                ),
-                TextFormField(
-                  readOnly: true,
-                  controller: joinedDateEditController,
-                  onTap: () {
-                    callDatePicker();
-                  },
-                  keyboardType: TextInputType.datetime,
-                  decoration: InputDecoration(
-                      icon: Icon(Icons.date_range),
-                      labelText: 'Joined Date *'
-                  ),
-                  onChanged: (text) {
-                    joinedDate = text;
-                  },
-                  validator: (text) {
-                    if (text == null || text.isEmpty) {
-                      return 'Joined date is empty';
-                    }
-                    return null;
-                  },
-                ),
-                SizedBox(
-                  height: 50.0,
-                ),
-                RaisedButton(
-                  onPressed: () {
-                    if (_formKey.currentState.validate()) {
-                      _prefs.setString(kUserName, userName);
-                      _prefs.setString(kEmail, email);
-                      _prefs.setString(kJoinedDate, joinedDate);
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (context) => DashboardScreen()),
-                      );
-                    }
-                  },
-                  color: Colors.green[900],
-                  textColor: Colors.white,
-                  padding: const EdgeInsets.all(0.0),
-                  child: Container(
-                    padding: const EdgeInsets.all(10.0),
-                    child:
-                    const Text('Save', style: TextStyle(fontSize: 20)),
-                  ),
-                )
-              ],
+              ),
             ),
           ),
         ),
@@ -192,3 +240,4 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     );
   }
 }
+

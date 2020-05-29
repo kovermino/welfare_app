@@ -17,8 +17,12 @@ dependencies:
   sqflite: ^1.3.0+1
   path_provider: ^1.2.0
   path: ^1.6.2
+  date_range_picker: ^1.0.5
+  dropdownfield: ^1.0.3
+  provider: ^4.1.2
 
 dev_dependencies:
+  test:
   flutter_test:
     sdk: flutter
 

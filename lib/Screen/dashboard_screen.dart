@@ -24,7 +24,7 @@ class DashboardScreen extends StatelessWidget {
                   const ListTile(
                     leading: Icon(
                       Icons.airplanemode_active,
-                      color: Colors.cyanAccent,
+                      color: kVacationColour,
                     ),
                     title: Text(
                       'My Vacations',
@@ -64,7 +64,7 @@ class DashboardScreen extends StatelessWidget {
                   const ListTile(
                     leading: Icon(
                       Icons.attach_money,
-                      color: Colors.yellow,
+                      color: kExpenseColour,
                     ),
                     title: Text(
                       'My Expense',
@@ -107,7 +107,7 @@ class DashboardScreen extends StatelessWidget {
           );
         },
         child: Icon(Icons.settings),
-        backgroundColor: Colors.blue,
+        backgroundColor: Colors.blueGrey,
       ),
     );
   }
