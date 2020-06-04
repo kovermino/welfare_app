@@ -33,6 +33,8 @@ class _VacationRecordsScreenState extends State<VacationRecordsScreen> {
     _loadPref();
   }
 
+
+
   void _loadPref() async {
     _prefs = await SharedPreferences.getInstance();
   }

@@ -10,5 +10,6 @@ const kExpenseColour = Colors.amber;
 const kUserName = 'UserName';
 const kEmail = 'Email';
 const kJoinedDate = 'JoinedDate';
+const kAutoCalc = 'AutoCalc';
 
 const kVacationTypes = ['연차', '반차', '리워드'];

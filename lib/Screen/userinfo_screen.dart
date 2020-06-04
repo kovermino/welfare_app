@@ -41,9 +41,12 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     emailEditController.text = email;
     joinedDateEditController.text = joinedDate;
 
-    int available = _prefs.getInt(currentYear);
-    print(available);
-    if (available == null || available == 0) {
+    setState(() {
+      autoCalc = _prefs.getBool(kAutoCalc);
+    });
+
+    available = _prefs.getInt(currentYear);
+    if (available == null || available == -1) {
       availableVacationController.text = VacationCalculator.calculateCurrentAvailableFromJoinedDate(joinedDate, currentDate).toString();
     } else {
       availableVacationController.text = available.toString();
@@ -186,6 +189,9 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
                           icon: Icon(Icons.event_available),
                           labelText: 'Available Vacation *'
                       ),
+                      onChanged: (text) {
+                        available = int.parse(text);
+                      },
                     ),
                     SizedBox(
                       height: 30.0,
@@ -201,6 +207,10 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
                           onChanged: (value) {
                             setState(() {
                               autoCalc = value;
+                              if(autoCalc) {
+                                available = VacationCalculator.calculateCurrentAvailableFromJoinedDate(joinedDate, currentDate);
+                                availableVacationController.text = available.toString();
+                              }
                             });
                           },
                         ),
@@ -212,9 +222,11 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
                     RaisedButton(
                       onPressed: () {
                         if (_formKey.currentState.validate()) {
+                          _prefs.setBool(kAutoCalc, autoCalc);
                           _prefs.setString(kUserName, userName);
                           _prefs.setString(kEmail, email);
                           _prefs.setString(kJoinedDate, joinedDate);
+                          _prefs.setInt(currentYear, available);
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(builder: (context) => DashboardScreen()),

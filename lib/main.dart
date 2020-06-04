@@ -27,7 +27,6 @@ class _WelfareHomeState extends State<WelfareHome> {
   @override
   Widget build(BuildContext context) {
     _loadUserInfo();
-    print(userName);
     Widget homeScreen;
     if (userName == null) {
       homeScreen = UserInfoScreen();
