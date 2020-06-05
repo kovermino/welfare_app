@@ -39,7 +39,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     joinedDate = _prefs.getString(kJoinedDate);
     userNameEditController.text = userName;
     emailEditController.text = email;
-    joinedDateEditController.text = joinedDate;
+    joinedDateEditController.text = joinedDate == null ? "" : joinedDate ;
 
     setState(() {
       autoCalc = _prefs.getBool(kAutoCalc);
@@ -183,7 +183,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
                     ),
                     TextFormField(
                       controller: availableVacationController,
-                      readOnly: autoCalc,
+                      readOnly: autoCalc == null ? true : autoCalc,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
                           icon: Icon(Icons.event_available),
@@ -197,13 +197,14 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
                       height: 30.0,
                     ),
                     Container(
-                      color: Colors.blueGrey[800],
+                      color: Colors.indigo,
                       child: ListTile(
                         leading: Icon(Icons.autorenew),
                         title: Text('auto calculate vacations'),
                         trailing: Checkbox(
+                          activeColor: Colors.yellow,
                           checkColor: Colors.black,
-                          value: autoCalc,
+                          value: autoCalc == null ? true : autoCalc,
                           onChanged: (value) {
                             setState(() {
                               autoCalc = value;

@@ -69,6 +69,17 @@ class VacationRepositoryImplSqlite {
     return Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM $table'));
   }
 
+  Future<double> querySumDeduction(String year) async {
+    Database db = await instance.database;
+    List<Map<String, dynamic>> sumDeduction = await db.rawQuery('SELECT SUM(deduction) as total_deduction FROM $table WHERE date like \'$year%\'');
+    if (sumDeduction.length == 0) {
+      return 0;
+    }else {
+      Map<String, dynamic> result = sumDeduction[0];
+      return result['total_deduction'].toDouble();
+    }
+  }
+
   Future<int> queryRowCountByYear(String year) async {
     Database db = await instance.database;
     return Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM $table WHERE date like \'$year%\''));

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:welfare_app/Repository/RepositoryImpl/vacation_repository_sqlite.dart';
-import 'package:welfare_app/Util/vacation_calaulator.dart';
+import 'package:welfare_app/Screen/mail_address_screen.dart';
+import 'package:welfare_app/Util/vacation_manager.dart';
 import 'package:welfare_app/VO/VacationRecord.dart';
 import 'package:welfare_app/constants.dart';
 import 'add_vacation_screen.dart';
@@ -13,14 +12,13 @@ class VacationRecordsScreen extends StatefulWidget {
 }
 
 class _VacationRecordsScreenState extends State<VacationRecordsScreen> {
-  final dbHelper = VacationRepositoryImplSqlite.instance;
-  SharedPreferences _prefs;
-  var recordTextEditController = TextEditingController();
+  VacationManager manager = new VacationManager(DateFormat('yyyy').format(DateTime.now()));
+
   List<VacationRecord> records = [];
   String availableText = '사용가능 : 0';
   String recordsText = 'No record.';
-  String currentYear = DateFormat('yyyy').format(DateTime.now());
-  String currentDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+  var recordTextEditController = TextEditingController();
 
   @override
   void initState() {
@@ -28,15 +26,20 @@ class _VacationRecordsScreenState extends State<VacationRecordsScreen> {
     _dataLoad();
   }
 
-  void _dataLoad() {
-    _query();
-    _loadPref();
+  void _dataLoad() async {
+    List<VacationRecord> rows = await manager.getAllRecords();
+    int totalAvailable = await manager.getTotalAvailable();
+    double available = await manager.getAvailable();
+    setState(() {
+      records = rows;
+      recordsText = rows==null ?  'No records.' : (rows.length == 0 ? 'No records.' : (rows.length==1 ? '1 record exists.' : rows.length.toString() + ' records exist.'));
+      availableText = '사용가능 : ' + available.toString() + ' / ' + totalAvailable.toString();
+    });
   }
 
-
-
-  void _loadPref() async {
-    _prefs = await SharedPreferences.getInstance();
+  void deleteItem(String date){
+    manager.deleteVacationRecord(date);
+    _dataLoad();
   }
 
   @override
@@ -45,6 +48,17 @@ class _VacationRecordsScreenState extends State<VacationRecordsScreen> {
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text('Vacation Records'),
+        actions: <Widget>[
+          IconButton(
+            icon: Icon(Icons.email),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => MailAddressScreen()),
+              );
+            },
+          )
+        ],
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -78,7 +92,7 @@ class _VacationRecordsScreenState extends State<VacationRecordsScreen> {
           showModalBottomSheet(
             isScrollControlled: true,
             context: context,
-            builder: (context) => AddVacationScreen(_query),
+            builder: (context) => AddVacationScreen(_dataLoad),
           );
         },
         child: Icon(Icons.add),
@@ -96,12 +110,13 @@ class _VacationRecordsScreenState extends State<VacationRecordsScreen> {
             key: ObjectKey(records[index]),
             onDismissed: (direction) {
               var record = records[index];
-              dbHelper.delete(record.date);
-              deleteItemFromListView(index);
+              deleteItem(record.date);
             },
             child: Container(
               child: ListTile(
-                leading: Text('(' + records[index].vacationType + ')'),
+                leading: records[index].vacationType == kVacationTypes[0] ? Icon(Icons.star, color: Colors.yellow,) :
+                (records[index].vacationType==kVacationTypes[1] ? Icon(Icons.star_half, color: Colors.purple,) :
+                Icon(Icons.music_note, color: Colors.green,)),
                 title: Text(
                   records[index].date,
                   style: TextStyle(
@@ -112,42 +127,12 @@ class _VacationRecordsScreenState extends State<VacationRecordsScreen> {
                   records[index].remark,
                   style: TextStyle(fontSize: 15.0),
                 ),
-                trailing: records[index].vacationType == kVacationTypes[0] ? Icon(Icons.star) : (records[index].vacationType==kVacationTypes[1] ? Icon(Icons.star_half) : Icon(Icons.add)),
+                trailing:  Text('(' + records[index].vacationType + ')'),
               ),
             ),
           );
         });
   }
 
-  void _query() async {
-    final allRows = await dbHelper.queryRowsForYear('2020');
-    List<VacationRecord> rows = [];
-    allRows.forEach((row) => rows.add(VacationRecord.fromMap(row)));
-    String joinedDate = _prefs.getString(kJoinedDate);
-    int totalAvailable = _prefs.getInt(currentYear);
-    double available = 0;
-    double count = 0;
-    for(VacationRecord record in rows) {
-      count += record.deduction;
-    }
 
-    if (totalAvailable == null || totalAvailable == 0) {
-      available = VacationCalculator.calculateCurrentAvailableFromJoinedDate(joinedDate, currentDate) - count;
-    } else {
-      available = totalAvailable - count;
-    }
-
-    setState(() {
-      records = rows;
-      recordsText = rows==null ?  'No records.' : (rows.length == 0 ? 'No records.' : (rows.length==1 ? '1 record exists.' : rows.length.toString() + ' records exist.'));
-      availableText = '사용가능 : ' + available.toString();
-    });
-  }
-
-  void deleteItemFromListView(index){
-    _query();
-    setState((){
-      records.removeAt(index);
-    });
-  }
 }

@@ -1,9 +1,9 @@
-import 'package:dropdownfield/dropdownfield.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:intl/intl.dart';
 import 'package:date_range_picker/date_range_picker.dart' as DateRagePicker;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:welfare_app/Repository/RepositoryImpl/vacation_repository_sqlite.dart';
+import 'package:welfare_app/Util/vacation_manager.dart';
 import 'package:welfare_app/VO/VacationRecord.dart';
 import 'package:welfare_app/constants.dart';
 
@@ -17,7 +17,8 @@ class AddVacationScreen extends StatefulWidget {
 }
 
 class _AddVacationScreenState extends State<AddVacationScreen> {
-  final dbHelper = VacationRepositoryImplSqlite.instance;
+  VacationManager manager = VacationManager(DateFormat('yyyy').format(DateTime.now()));
+  SharedPreferences _pref;
   final _formKey = GlobalKey<FormState>();
   List<DateTime> selectedDates = [];
   String vacationType = kVacationTypes[0];
@@ -30,9 +31,29 @@ class _AddVacationScreenState extends State<AddVacationScreen> {
     var order = await getDate();
     setState(() {
       if (order != null) {
-        dateEditController.text = DateFormat('yyyy-MM-dd').format(order);
+        if(order.weekday != 6 && order.weekday != 7) {
+          selectedDates = [];
+          selectedDates.add(order);
+          dateEditController.text = DateFormat('yyyy-MM-dd').format(order);
+        }
       }
     });
+  }
+
+  void sendEmail() async {
+    _pref = await SharedPreferences.getInstance();
+    String name = _pref.getString(kUserName);
+    final Email email = Email(
+      body: '안녕하세요, ' + name + '입니다.\n' + dateEditController.text + ' ' + vacationType + ' 사용합니다.\n업무에 참고 부탁드리겠습니다. \n감사합니다',
+      subject:  vacationType + ' 사용 - [' + dateEditController.text + ']',
+      recipients: ['eunseok.kim@milliman.com;Soyoung.Moon@milliman.com'],
+      // cc: ['cc@example.com'],
+      // bcc: ['bcc@example.com'],
+      // attachmentPaths: ['/path/to/attachment.zip'],
+      isHTML: false,
+    );
+
+    await FlutterEmailSender.send(email);
   }
 
   Future<DateTime> getDate() {
@@ -63,7 +84,7 @@ class _AddVacationScreenState extends State<AddVacationScreen> {
           ),
           child: Container(
               decoration: BoxDecoration(
-                color: Colors.blueGrey,
+                color: kActiveCardColour,
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(20.0),
                   topRight: Radius.circular(20.0),
@@ -110,21 +131,34 @@ class _AddVacationScreenState extends State<AddVacationScreen> {
                         controller: dateEditController,
                         readOnly: true,
                         onTap: () async {
-                          if (vacationType == kVacationTypes[0]) {
+                          if (vacationType == kVacationTypes[0] || vacationType == kVacationTypes[2]) {
                             final List<DateTime> picked = await DateRagePicker.showDatePicker(
                                 context: context,
                                 initialFirstDate: new DateTime.now(),
                                 initialLastDate: (new DateTime.now()).add(new Duration(days: 1)),
                                 firstDate: new DateTime(2015),
-                                lastDate: new DateTime(2021)
+                                lastDate: new DateTime(2021),
                             );
                             if (picked != null) {
-                              selectedDates = picked;
-                              if (picked.length == 1) {
-                                dateEditController.text = DateFormat('yyyy-MM-dd').format(picked[0]);
+                              selectedDates = [];
+                              DateTime currentDate = picked[0];
+                              while(currentDate.isBefore(picked[picked.length-1])) {
+                                if (currentDate.weekday != 6 && currentDate.weekday != 7) {
+                                  selectedDates.add(currentDate);
+                                }
+                                currentDate = currentDate.add(new Duration(days: 1));
                               }
 
-                              print(picked);
+                              if (currentDate.weekday != 6 && currentDate.weekday != 7) {
+                                selectedDates.add(currentDate);
+                              }
+                              currentDate = currentDate.add(new Duration(days: 1));
+
+                              if (picked.length == 1) {
+                                dateEditController.text = DateFormat('yyyy-MM-dd').format(picked[0]);
+                              } else {
+                                dateEditController.text = DateFormat('yyyy-MM-dd').format(picked[0]) + ' ~ ' + DateFormat('yyyy-MM-dd').format(picked[picked.length-1]) + ' (' + selectedDates.length.toString() + '일)';
+                              }
                             }
                           }else {
                             callDatePicker();
@@ -156,8 +190,13 @@ class _AddVacationScreenState extends State<AddVacationScreen> {
                       ),
                       RaisedButton(
                         onPressed: () {
-                          dbHelper.insert(VacationRecord(dateEditController.text, vacationType, remark).toMap());
+                          List<VacationRecord> records = [];
+                          for(DateTime date in selectedDates) {
+                            records.add(VacationRecord(DateFormat('yyyy-MM-dd').format(date), vacationType, remark));
+                          }
+                          manager.insertVacationRecords(records);
                           widget.queryVacationScreen();
+                          sendEmail();
                           Navigator.pop(context);
                         },
                         color: Colors.blue,
